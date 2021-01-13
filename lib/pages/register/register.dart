@@ -1,15 +1,22 @@
+import 'package:chat_flutter_app/pages/auth/authenticate.dart';
 import 'package:chat_flutter_app/services/auth.dart';
+import 'package:chat_flutter_app/services/database.dart';
+import 'package:chat_flutter_app/services/helperfunction.dart';
 import 'package:chat_flutter_app/widgets/widget.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 class RegisterPage extends StatefulWidget {
+  final Function toggle;
+  RegisterPage(this.toggle);
   @override
   _RegisterPageState createState() => _RegisterPageState();
 }
 
 class _RegisterPageState extends State<RegisterPage> {
   Authentication _authentication = new Authentication();
+  Database database = new Database();
+  HelperFunctions helperFunction = new HelperFunctions();
   final _formKey = GlobalKey<FormState>();
   String appBarTitle="Register";
   bool isLoading = false;
@@ -17,12 +24,24 @@ class _RegisterPageState extends State<RegisterPage> {
   TextEditingController emailText = new TextEditingController();
   TextEditingController passwordText = new TextEditingController();
 
-  RegisterMe(){
+  registerMe(){
     if(_formKey.currentState.validate()){
       setState(() {
         isLoading = true;
       });
-      _authentication.registerWithEmailAndPassword(emailText.text, passwordText.text).then((value) => print("$value"));
+      _authentication.registerWithEmailAndPassword(emailText.text, passwordText.text).then((value) {
+        print("$value");
+        // map data to firebase
+        Map<String, String>userInfoMap = {
+          "name" : usernameText.text,
+          "email" : emailText.text,
+        };
+        database.uploadUserInfo(userInfoMap);
+        HelperFunctions.saveUserEmailSharedPreference(emailText.text);
+        HelperFunctions.saveUserEmailSharedPreference(usernameText.text);
+        HelperFunctions.saveUserLoggedInSharedPreference(true);
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) =>Authenticate() ));
+      });
     }
   }
   @override
@@ -49,7 +68,7 @@ class _RegisterPageState extends State<RegisterPage> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       TextFormField(
-                        validator: (val) => val.length <6 ? 'Enter valid a username 6+ chars long ' : null,
+                        validator: (val) => val.length <4 ? 'Enter valid a username 4+ chars long ' : null,
                         controller: usernameText,
                         style: TextStyle(color: Colors.white),
                         textAlign: TextAlign.center,
@@ -65,7 +84,7 @@ class _RegisterPageState extends State<RegisterPage> {
                       ),
                       SizedBox(height: 12.0,),
                       TextFormField(
-                        validator: (val) => val.length <6 ? 'Enter a valid Password 6+ chars long ' : null,
+                        validator: (val) => val.length <4 ? 'Enter a valid Password 4+ chars long ' : null,
                         controller: passwordText,
                         style: TextStyle(color: Colors.white),
                         textAlign: TextAlign.center,
@@ -73,7 +92,7 @@ class _RegisterPageState extends State<RegisterPage> {
                       ),
                       SizedBox(height: 24.0,),
                       GestureDetector(
-                        onTap: () => RegisterMe(),
+                        onTap: () => registerMe(),
                         child: Container(
                           alignment: Alignment.center,
                           width: MediaQuery.of(context).size.width,
@@ -106,8 +125,15 @@ class _RegisterPageState extends State<RegisterPage> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text('Already have account ?',style: simpleTextFieldStyle(),),
-                          SizedBox(width: 5.0,),
-                          Text("Sign In now", style: underlineTextFieldStyle(),),
+
+                          GestureDetector(
+                            onTap: (){
+                              widget.toggle();
+                            },
+                            child: Container(
+                                padding: EdgeInsets.symmetric(vertical: 8.0),
+                                child: Text("Sign In now", style: underlineTextFieldStyle(),)),
+                          ),
                         ],
                       ),
                     ],
